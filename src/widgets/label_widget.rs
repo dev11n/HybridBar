@@ -1,3 +1,5 @@
+// use regex::Regex;
+
 use crate::{
     config,
     constants::{
@@ -95,29 +97,70 @@ fn start_tooltip_loop(label_ref: &mut LabelWidget) {
 fn start_label_loop(label_ref: &mut LabelWidget) {
     let label = take(&mut label_ref.label);
     let command = label_ref.command.to_owned();
-    if command.is_empty() || label_ref.update_rate <= 3 {
-        // Not eligible, cancel.
-        return;
-    }
-
+    // println!("{}", label_ref);;
+    // TODO: To initiate the update rate, also to modify if the
+    // update_rate was empty to to set to 500ms automatically.
+    
+    let mut update_rate: u64 = label_ref.update_rate;
+    let mut anim_speed: u32 = label_ref.anim_duration;
     let text = label_ref.text.to_owned();
     let listen = label_ref.listen;
     let update_anim = take(&mut label_ref.update_anim).expect(ERR_WRONG_LABEL_RANIM);
     let revealer = take(&mut label_ref.revealer);
-    let anim_speed = label_ref.anim_duration;
+
+    if !command.is_empty() && update_rate <= 500 {
+        update_rate = 500;
+    }
+
+    if command.is_empty() {
+        // Not eligible, cancel.
+        return;
+    }
+    println!("{}", update_rate);
+
+    // INFO: This is just to update the animation speed for less not showing due to animation
+    // I've experienced some issue that I want to update the result everytime, that's why I added
+    // this, you may also check my configuration thou.
+    if update_anim == RevealerTransitionType::Crossfade && update_rate <= 500 && update_rate >= 0 && anim_speed >= 250 {
+        if update_rate <= u32::MAX as u64 {
+            anim_speed = 0;
+        }
+    }
+
     let tick = move || {
         if !listen {
             let mut new_text = String::default();
             new_text.push_str(&text);
-            new_text.push_str(&use_aliases(&command));
+            
+            // INFO: This will automatically add the %command% for formatting
+            // If ever that the text is empty.
+            if new_text.is_empty() && !command.is_empty() {
+                new_text.push_str("%command%");
+            }
+            
+            // INFO: This is to replace the %command% to the executed command
+            new_text = new_text.replace("%command%", &use_aliases(&command));
+            
+            // TODO: To use the regex for string formatting
+            
+            // let pattern = Regex::new(r"%(?P<data>\w+)%").expect("Failed to create regex");
+            //
+            // if let Some(capt) = pattern.captures(&new_text) {
+            //     new_text = new_text.replace(format!("%{}%", &capt["data"]), &use_aliases(&label_ref.command.get(capt["data"])))
+            // }
+            
 
-            if !label.text().eq(&new_text) {
+            if !label.text().eq(&new_text) && !new_text.is_empty() {
+                // NOTE: I'd just used this print function to debug
+                // I'm still newbie with rust thou.
+                // println!("Update {}", new_text);
                 restart_revealer!(
                     revealer,
                     || label.set_text(&new_text),
                     update_anim,
                     anim_speed
                 );
+                // label.set_text(&new_text);
             }
         } else {
             restart_revealer!(
@@ -127,12 +170,14 @@ fn start_label_loop(label_ref: &mut LabelWidget) {
                 anim_speed
             );
         }
-
-        glib::Continue(true)
+        // NOTE: I don't know what is the reason, but it helps to
+        // automatic update
+        return glib::Continue(true);
     };
-
-    tick();
-    glib::timeout_add_local(Duration::from_millis(label_ref.update_rate), tick);
+    
+    // INFO: I've commented this, cause I don't know the reason.
+    // tick();
+    glib::timeout_add_local(Duration::from_millis(update_rate), tick);
 }
 
 /// Updates the labels content with the string from `BUFFER`.

@@ -796,6 +796,7 @@ dependencies = [
  "json",
  "lazy_static",
  "lxinfo",
+ "regex",
  "stray",
  "tokio",
  "tracing-subscriber",

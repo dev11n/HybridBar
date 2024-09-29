@@ -45,13 +45,13 @@ fn update_cava() -> Continue {
         }
 
         if let Ok(has_cava_crashed) = HAS_CAVA_CRASHED.lock() {
-            glib::Continue(!*has_cava_crashed)
+            return glib::Continue(!*has_cava_crashed)
         } else {
             log!(WARN_CAVA_NO_CRASHED_INSTANCE);
-            glib::Continue(false)
+            return glib::Continue(false)
         }
     } else {
         log!(WARN_CAVA_NO_BARS_INSTANCE);
-        glib::Continue(false)
+        return glib::Continue(false)
     }
 }

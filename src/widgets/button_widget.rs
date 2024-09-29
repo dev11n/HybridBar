@@ -61,10 +61,11 @@ impl HWidget for ButtonWidget {
                 button.set_tooltip_markup(Some(&new_tooltip));
             }
 
-            glib::Continue(true)
+            // INFO: I did the same thing as the label has.
+            return glib::Continue(true)
         };
 
-        tick();
+        // tick();
         // NOTE: This does NOT respect update_rate, since it's not meant to update super fast.
         glib::timeout_add_local(Duration::from_millis(1000), tick);
     }
